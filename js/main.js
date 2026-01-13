@@ -53,10 +53,18 @@ async function init() {
 
     // 6. PoseEngine 콜백 설정
     poseEngine.setPredictionCallback(handlePrediction);
-    poseEngine.setDrawCallback(drawPose);
+
+    // Custom Draw Loop: Webcam -> Skeleton -> Game Elements
+    poseEngine.setDrawCallback((pose) => {
+      drawPose(pose);
+      drawGameElements();
+    });
 
     // 7. PoseEngine 시작
     poseEngine.start();
+
+    // 8. 게임 모드 시작 (GameEngine Start)
+    startGameMode();
 
     stopBtn.disabled = false;
   } catch (error) {
@@ -77,7 +85,7 @@ function stop() {
     poseEngine.stop();
   }
 
-  if (gameEngine && gameEngine.isGameActive) {
+  if (gameEngine) {
     gameEngine.stop();
   }
 
@@ -91,8 +99,6 @@ function stop() {
 
 /**
  * 예측 결과 처리 콜백
- * @param {Array} predictions - TM 모델의 예측 결과
- * @param {Object} pose - PoseNet 포즈 데이터
  */
 function handlePrediction(predictions, pose) {
   // 1. Stabilizer로 예측 안정화
@@ -109,15 +115,14 @@ function handlePrediction(predictions, pose) {
   const maxPredictionDiv = document.getElementById("max-prediction");
   maxPredictionDiv.innerHTML = stabilized.className || "감지 중...";
 
-  // 4. GameEngine에 포즈 전달 (게임 모드일 경우)
+  // 4. GameEngine에 포즈 전달
   if (gameEngine && gameEngine.isGameActive && stabilized.className) {
     gameEngine.onPoseDetected(stabilized.className);
   }
 }
 
 /**
- * 포즈 그리기 콜백
- * @param {Object} pose - PoseNet 포즈 데이터
+ * 포즈 그리기 콜백 (기본 웹캠 + 스켈레톤)
  */
 function drawPose(pose) {
   if (poseEngine.webcam && poseEngine.webcam.canvas) {
@@ -132,27 +137,65 @@ function drawPose(pose) {
   }
 }
 
-// 게임 모드 시작 함수 (선택적 - 향후 확장용)
-function startGameMode(config) {
-  if (!gameEngine) {
-    console.warn("GameEngine이 초기화되지 않았습니다.");
-    return;
+/**
+ * 게임 요소 그리기 (바구니, 아이템)
+ */
+function drawGameElements() {
+  if (!gameEngine || !gameEngine.isGameActive) return;
+
+  const state = gameEngine.getGameState(); // Helper needed in GameEngine or access directly
+
+  // 1. Draw Basket
+  const basketX = {
+    "Left": 40,
+    "Center": 100,
+    "Right": 160
+  }[state.basketPosition] || 100;
+
+  ctx.fillStyle = "#8B4513"; // Brown
+  ctx.fillRect(basketX - 20, 170, 40, 20);
+
+  // Basket Label
+  ctx.fillStyle = "white";
+  ctx.font = "12px Arial";
+  ctx.fillText("Basket", basketX - 18, 185);
+
+  // 2. Draw Items
+  if (state.items) {
+    state.items.forEach(item => {
+      ctx.beginPath();
+      ctx.arc(item.x, item.y, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = item.color;
+      ctx.fill();
+      // Icon or Text
+      ctx.fillStyle = "white";
+      ctx.font = "12px Arial";
+      ctx.fillText(item.type === 'bad' ? "💣" : "🍎", item.x - 6, item.y + 4);
+    });
   }
 
-  gameEngine.setCommandChangeCallback((command) => {
-    console.log("새로운 명령:", command);
-    // UI 업데이트 로직 추가 가능
-  });
+  // 3. HUD (Score & Time) -> Painted on Canvas or DOM? 
+  // Let's paint simple HUD on Canvas for sync
+  ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+  ctx.fillRect(0, 0, 200, 30);
+  ctx.fillStyle = "white";
+  ctx.font = "14px Arial";
+  ctx.fillText(`Score: ${state.score}`, 10, 20);
+  ctx.fillText(`Time: ${state.timeLimit || 0}`, 130, 20);
+}
 
+// 게임 모드 시작 함수
+function startGameMode(config) {
+  if (!gameEngine) return;
+
+  // DOM UI 업데이트 콜백 연결
   gameEngine.setScoreChangeCallback((score, level) => {
-    console.log(`점수: ${score}, 레벨: ${level}`);
-    // UI 업데이트 로직 추가 가능
+    // console.log(`Score: ${score}, Level: ${level}`);
   });
 
   gameEngine.setGameEndCallback((finalScore, finalLevel) => {
-    console.log(`게임 종료! 최종 점수: ${finalScore}, 최종 레벨: ${finalLevel}`);
-    alert(`게임 종료!\n최종 점수: ${finalScore}\n최종 레벨: ${finalLevel}`);
+    alert(`게임 종료! 최종 점수: ${finalScore}점`);
   });
 
-  gameEngine.start(config);
+  gameEngine.start({ timeLimit: 60 });
 }
