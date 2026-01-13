@@ -77,7 +77,26 @@ class GameEngine {
     }, 1000);
   }
 
-  // ... (clearTimer, startGameLoop, stopGameLoop remain same)
+  clearTimer() {
+    if (this.gameTimer) {
+      clearInterval(this.gameTimer);
+      this.gameTimer = null;
+    }
+  }
+
+  startGameLoop() {
+    // 60 FPS physics loop
+    this.updateInterval = setInterval(() => {
+      this.update();
+    }, 1000 / 60);
+  }
+
+  stopGameLoop() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
+  }
 
   /**
    * Adjust Speed manually (or via Level)
@@ -88,7 +107,58 @@ class GameEngine {
     if (this.speedOffset > 10) this.speedOffset = 10; // Increased max speed
   }
 
-  // ... (update remains same)
+  /**
+   * Core Game Loop
+   */
+  update() {
+    if (!this.isGameActive) return;
+
+    const now = Date.now();
+
+    // 1. Spawn Items
+    const effectiveSpawnRate = Math.max(500, this.spawnRate - (this.speedOffset * 200));
+
+    if (now - this.lastSpawnTime > effectiveSpawnRate) {
+      this.spawnItem();
+      this.lastSpawnTime = now;
+    }
+
+    // 2. Move Items & Check Collision
+    // Canvas height is assumed to be 200 (from main.js)
+    const moveSpeed = 1 + (this.level * 0.5) + this.speedOffset;
+
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const item = this.items[i];
+      item.y += moveSpeed;
+
+      // Collision Detection (Bottom of screen)
+      // Basket Y is approx 180, Item Size 20-30
+      if (item.y > 170 && item.y < 200) {
+        // Check X overlap
+        if (this.checkCollision(item)) {
+          this.handleItemCollection(item);
+          this.items.splice(i, 1);
+          continue;
+        }
+      }
+
+      // Remove if off screen
+      if (item.y > 220) {
+        this.items.splice(i, 1);
+      }
+    }
+
+    // 3. Notify Renderer
+    if (this.onUpdateState) {
+      this.onUpdateState({
+        items: this.items,
+        basketPosition: this.basketPosition,
+        score: this.score,
+        time: this.timeLimit,
+        level: this.level
+      });
+    }
+  }
 
   spawnItem() {
     const types = [
