@@ -198,7 +198,45 @@ function drawGameElements() {
   ctx.textAlign = "left"; // Reset alignment
   ctx.font = "14px Arial";
   ctx.fillText(`Score: ${state.score} (Lv.${state.level || 1})`, 10, 20);
-  // Time removed
+  // 4. Perks UI (Shield, Luck, Greed)
+  if (state.perks) {
+    ctx.fillStyle = "white";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(`🛡️x${state.perks.shield}  🍀Lv${state.perks.luck}  💰Lv${state.perks.greed}`, 190, 40);
+    ctx.textAlign = "left";
+  }
+
+  // 5. Level Up Overlay
+  if (state.isLevelUpPending) {
+    // Semi-transparent overlay
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.fillRect(0, 0, 200, 200);
+
+    ctx.fillStyle = "gold";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("LEVEL UP!", 100, 40);
+
+    ctx.fillStyle = "white";
+    ctx.font = "12px Arial";
+    ctx.fillText("Choose an Upgrade:", 100, 60);
+
+    // Options
+    ctx.font = "12px Arial";
+    ctx.textAlign = "left";
+
+    // 1. Shield
+    ctx.fillText("1. 🛡️ Shield (Block Bomb)", 30, 90);
+    // 2. Luck
+    ctx.fillText("2. 🍀 Luck (Less Bombs)", 30, 120);
+    // 3. Greed
+    ctx.fillText("3. 💰 Greed (Better Boxes)", 30, 150);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#aaa";
+    ctx.fillText("Press 1, 2, or 3", 100, 180);
+  }
 }
 
 // 게임 모드 시작 함수
@@ -218,6 +256,15 @@ function startGameMode(config) {
 
   // 키보드 컨트롤 추가
   window.addEventListener("keydown", (event) => {
+    // If pending level up, only accept 1, 2, 3
+    const state = gameEngine.getGameState();
+    if (state.isLevelUpPending) {
+      if (event.key === "1") gameEngine.selectPerk(1);
+      if (event.key === "2") gameEngine.selectPerk(2);
+      if (event.key === "3") gameEngine.selectPerk(3);
+      return; // Skip other keys
+    }
+
     if (!gameEngine || !gameEngine.isGameActive) return;
 
     // Movement
