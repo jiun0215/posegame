@@ -51,7 +51,55 @@ class GameEngine {
     this.startGameLoop();
   }
 
-  // ... (stop, startTimer, clearTimer, startGameLoop, stopGameLoop remain same or similar)
+  /**
+   * Stop Game
+   */
+  stop() {
+    this.isGameActive = false;
+    this.clearTimer();
+    this.stopGameLoop();
+
+    if (this.onGameEnd) {
+      this.onGameEnd(this.score, this.level);
+    }
+  }
+
+  startTimer() {
+    this.gameTimer = setInterval(() => {
+      this.timeLimit--;
+
+      // Level up logic based on time (every 20s)
+      if (this.timeLimit % 20 === 0 && this.timeLimit !== 60) {
+        this.level++;
+        this.spawnRate = Math.max(500, 1500 - (this.level - 1) * 300); // Increase difficulty
+      }
+
+      if (this.timeLimit <= 0) {
+        this.stop();
+      }
+    }, 1000);
+  }
+
+  clearTimer() {
+    if (this.gameTimer) {
+      clearInterval(this.gameTimer);
+      this.gameTimer = null;
+    }
+  }
+
+  startGameLoop() {
+    // 60 FPS physics loop
+    this.updateInterval = setInterval(() => {
+      this.update();
+    }, 1000 / 60);
+  }
+
+  stopGameLoop() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
+  }
 
   /**
    * Adjust Speed manually
