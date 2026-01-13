@@ -138,6 +138,31 @@ function drawGameElements() {
 
   const state = gameEngine.getGameState(); // Helper needed in GameEngine or access directly
 
+  // 0. Background based on Level
+  let bgGradient;
+  const level = state.level || 1;
+  const h = 200; // logical height
+
+  if (level >= 3) {
+    // Danger (Red/Dark)
+    bgGradient = ctx.createLinearGradient(0, 0, 0, h);
+    bgGradient.addColorStop(0, "#8B0000"); // Dark Red
+    bgGradient.addColorStop(1, "#FF4500"); // Orange Red
+  } else if (level === 2) {
+    // Dusk (Orange/Purple)
+    bgGradient = ctx.createLinearGradient(0, 0, 0, h);
+    bgGradient.addColorStop(0, "#FF8C00"); // Dark Orange
+    bgGradient.addColorStop(1, "#8A2BE2"); // Blue Violet
+  } else {
+    // Sky (Default)
+    bgGradient = ctx.createLinearGradient(0, 0, 0, h);
+    bgGradient.addColorStop(0, "#87CEEB"); // Sky Blue
+    bgGradient.addColorStop(1, "#E0F7FA"); // Light Cyan
+  }
+
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, 200, 200);
+
   // 1. Draw Basket
   const basketX = {
     "Left": 40,

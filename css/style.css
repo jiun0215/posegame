@@ -52,8 +52,7 @@ button:disabled {
   border-radius: 8px;
   display: block;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
-  /* Sky background */
+  /* background handled in main.js */
 }
 
 /* Hidden elements */
