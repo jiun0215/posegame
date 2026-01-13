@@ -22,46 +22,51 @@ async function init() {
   startBtn.disabled = true;
 
   try {
-    // 1. PoseEngine 초기화
-    poseEngine = new PoseEngine("./my_model/");
-    const { maxPredictions, webcam } = await poseEngine.init({
-      size: 200,
-      flip: true
-    });
+    // 1. PoseEngine (Webcam) Skipped for Keyboard Mode
+    // poseEngine = new PoseEngine("./my_model/");
+    // const { maxPredictions, webcam } = await poseEngine.init({
+    //   size: 200,
+    //   flip: true
+    // });
 
-    // 2. Stabilizer 초기화
-    stabilizer = new PredictionStabilizer({
-      threshold: 0.7,
-      smoothingFrames: 3
-    });
+    // 2. Stabilizer Skipped
+    // stabilizer = new PredictionStabilizer({
+    //   threshold: 0.7,
+    //   smoothingFrames: 3
+    // });
 
-    // 3. GameEngine 초기화 (선택적)
+    // 3. GameEngine 초기화
     gameEngine = new GameEngine();
 
-    // 4. 캔버스 설정
+    // 4. 캔버스 설정 (600x600 for bigger view)
     const canvas = document.getElementById("canvas");
-    canvas.width = 200;
-    canvas.height = 200;
+    canvas.width = 600;
+    canvas.height = 600;
     ctx = canvas.getContext("2d");
 
-    // 5. Label Container 설정
+    // Scale 3x (Logical 200x200 -> Physical 600x600)
+    ctx.scale(3, 3);
+
+    // 5. Label Container Not used
     labelContainer = document.getElementById("label-container");
-    labelContainer.innerHTML = ""; // 초기화
-    for (let i = 0; i < maxPredictions; i++) {
-      labelContainer.appendChild(document.createElement("div"));
-    }
+    if (labelContainer) labelContainer.style.display = 'none';
+    const maxPred = document.getElementById("max-prediction");
+    if (maxPred) maxPred.style.display = 'none';
 
-    // 6. PoseEngine 콜백 설정
-    poseEngine.setPredictionCallback(handlePrediction);
+    // 6. PoseEngine 콜백 설정 (Skipped)
+    // poseEngine.setPredictionCallback(handlePrediction);
 
-    // Custom Draw Loop: Webcam -> Skeleton -> Game Elements
-    poseEngine.setDrawCallback((pose) => {
-      drawPose(pose);
-      drawGameElements();
-    });
+    // Custom Draw Loop: Webcam -> Skeleton -> Game Elements (Skipped)
+    // poseEngine.setDrawCallback((pose) => {
+    //   drawPose(pose);
+    //   drawGameElements();
+    // });
 
-    // 7. PoseEngine 시작
-    poseEngine.start();
+    // 7. PoseEngine 시작 (Skipped)
+    // poseEngine.start();
+
+    // 6. Start Rendering Loop (independent of webcam)
+    requestAnimationFrame(renderLoop);
 
     // 8. 게임 모드 시작 (GameEngine Start)
     startGameMode();
@@ -75,67 +80,55 @@ async function init() {
 }
 
 /**
+ * Render Loop
+ */
+function renderLoop() {
+  if (!gameEngine || !gameEngine.isGameActive) {
+    // Continue loop even if paused? Or stop?
+    // For menu screen, we might want to keep drawing.
+  }
+
+  // Clear Canvas
+  ctx.clearRect(0, 0, 200, 200); // Logical size clearing
+
+  // Draw Game
+  drawGameElements(); // Uses drawGameElements from existing code
+
+  requestAnimationFrame(renderLoop);
+}
+
+/**
  * 애플리케이션 중지
  */
 function stop() {
   const startBtn = document.getElementById("startBtn");
   const stopBtn = document.getElementById("stopBtn");
 
-  if (poseEngine) {
-    poseEngine.stop();
-  }
+  // if (poseEngine) {
+  //   poseEngine.stop();
+  // }
 
   if (gameEngine) {
     gameEngine.stop();
   }
 
-  if (stabilizer) {
-    stabilizer.reset();
-  }
+  // if (stabilizer) {
+  //   stabilizer.reset();
+  // }
 
   startBtn.disabled = false;
   stopBtn.disabled = true;
 }
 
 /**
- * 예측 결과 처리 콜백
+ * 예측 결과 처리 콜백 (사용 안 함)
  */
-function handlePrediction(predictions, pose) {
-  // 1. Stabilizer로 예측 안정화
-  const stabilized = stabilizer.stabilize(predictions);
-
-  // 2. Label Container 업데이트
-  for (let i = 0; i < predictions.length; i++) {
-    const classPrediction =
-      predictions[i].className + ": " + predictions[i].probability.toFixed(2);
-    labelContainer.childNodes[i].innerHTML = classPrediction;
-  }
-
-  // 3. 최고 확률 예측 표시
-  const maxPredictionDiv = document.getElementById("max-prediction");
-  maxPredictionDiv.innerHTML = stabilized.className || "감지 중...";
-
-  // 4. GameEngine에 포즈 전달
-  if (gameEngine && gameEngine.isGameActive && stabilized.className) {
-    gameEngine.onPoseDetected(stabilized.className);
-  }
-}
+function handlePrediction(predictions, pose) { }
 
 /**
- * 포즈 그리기 콜백 (기본 웹캠 + 스켈레톤)
+ * 포즈 그리기 콜백 (사용 안 함)
  */
-function drawPose(pose) {
-  if (poseEngine.webcam && poseEngine.webcam.canvas) {
-    ctx.drawImage(poseEngine.webcam.canvas, 0, 0);
-
-    // 키포인트와 스켈레톤 그리기
-    if (pose) {
-      const minPartConfidence = 0.5;
-      tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
-      tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
-    }
-  }
-}
+function drawPose(pose) { }
 
 /**
  * 게임 요소 그리기 (바구니, 아이템)
@@ -198,4 +191,24 @@ function startGameMode(config) {
   });
 
   gameEngine.start({ timeLimit: 60 });
+
+  // 키보드 컨트롤 추가 (ArrowLeft, ArrowRight)
+  window.addEventListener("keydown", (event) => {
+    if (!gameEngine || !gameEngine.isGameActive) return;
+
+    const currentPos = gameEngine.basketPosition; // "Left", "Center", "Right"
+    let nextPos = currentPos;
+
+    if (event.key === "ArrowLeft") {
+      if (currentPos === "Right") nextPos = "Center";
+      else if (currentPos === "Center") nextPos = "Left";
+    } else if (event.key === "ArrowRight") {
+      if (currentPos === "Left") nextPos = "Center";
+      else if (currentPos === "Center") nextPos = "Right";
+    }
+
+    if (nextPos !== currentPos) {
+      gameEngine.onPoseDetected(nextPos);
+    }
+  });
 }

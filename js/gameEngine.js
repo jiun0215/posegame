@@ -37,7 +37,7 @@ class GameEngine {
     this.items = [];
     this.basketPosition = "Center";
     this.spawnRate = 1500;
-    this.lastSpawnTime = Date.now();
+    this.lastSpawnTime = 0; // First item spawns immediately
 
     if (this.timeLimit > 0) {
       this.startTimer();
