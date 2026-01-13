@@ -215,6 +215,15 @@ function drawGameElements() {
     ctx.fillText(weatherIcons[state.currentWeather], 190, 40);
   }
 
+  // Magnet Status (Center-Right)
+  if (state.magnetTimer > 0) {
+    ctx.fillStyle = "red";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "center";
+    const seconds = Math.ceil(state.magnetTimer / 60);
+    ctx.fillText(`🧲 MAG: ${seconds}s`, 100, 40);
+  }
+
   // 5. Level Up Overlay (Random Options)
   if (state.isLevelUpPending && state.levelOptions) {
     // Semi-transparent overlay
