@@ -198,44 +198,50 @@ function drawGameElements() {
   ctx.textAlign = "left"; // Reset alignment
   ctx.font = "14px Arial";
   ctx.fillText(`Score: ${state.score} (Lv.${state.level || 1})`, 10, 20);
-  // 4. Perks UI (Shield, Luck, Greed)
+  // 4. Perks UI & Weather
+  ctx.fillStyle = "white";
+  ctx.font = "12px Arial";
+
+  // Perks (Left)
   if (state.perks) {
-    ctx.fillStyle = "white";
-    ctx.font = "12px Arial";
-    ctx.textAlign = "right";
-    ctx.fillText(`🛡️x${state.perks.shield}  🍀Lv${state.perks.luck}  💰Lv${state.perks.greed}`, 190, 40);
     ctx.textAlign = "left";
+    ctx.fillText(`🛡️${state.perks.shield} 🍀${state.perks.luck} 💰${state.perks.greed}`, 10, 40);
   }
 
-  // 5. Level Up Overlay
-  if (state.isLevelUpPending) {
+  // Weather (Right)
+  if (state.currentWeather && state.currentWeather !== 'none') {
+    ctx.textAlign = "right";
+    const weatherIcons = { 'gold_rain': '🌧️Gold', 'bomb_rain': '⛈️Bomb', 'jackpot': '🎰777' };
+    ctx.fillText(weatherIcons[state.currentWeather], 190, 40);
+  }
+
+  // 5. Level Up Overlay (Random Options)
+  if (state.isLevelUpPending && state.levelOptions) {
     // Semi-transparent overlay
-    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
     ctx.fillRect(0, 0, 200, 200);
 
     ctx.fillStyle = "gold";
     ctx.font = "bold 16px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("LEVEL UP!", 100, 40);
+    ctx.fillText("LEVEL UP!", 100, 30);
 
     ctx.fillStyle = "white";
     ctx.font = "12px Arial";
-    ctx.fillText("Choose an Upgrade:", 100, 60);
+    ctx.fillText("Select One:", 100, 50);
 
-    // Options
-    ctx.font = "12px Arial";
+    // Draw Options
     ctx.textAlign = "left";
-
-    // 1. Shield
-    ctx.fillText("1. 🛡️ Shield (Block Bomb)", 30, 90);
-    // 2. Luck
-    ctx.fillText("2. 🍀 Luck (Less Bombs)", 30, 120);
-    // 3. Greed
-    ctx.fillText("3. 💰 Greed (Better Boxes)", 30, 150);
+    state.levelOptions.forEach((opt, index) => {
+      const y = 80 + (index * 35);
+      ctx.font = "14px Arial";
+      ctx.fillText(`${index + 1}. ${opt.icon} ${opt.label}`, 20, y);
+    });
 
     ctx.textAlign = "center";
+    ctx.font = "11px Arial";
     ctx.fillStyle = "#aaa";
-    ctx.fillText("Press 1, 2, or 3", 100, 180);
+    ctx.fillText("Press 1, 2, or 3", 100, 185);
   }
 }
 
@@ -252,17 +258,17 @@ function startGameMode(config) {
     alert(`게임 종료! 최종 점수: ${finalScore}점`);
   });
 
-  gameEngine.start(); // Remove timeLimit config
+  gameEngine.start();
 
   // 키보드 컨트롤 추가
   window.addEventListener("keydown", (event) => {
     // If pending level up, only accept 1, 2, 3
     const state = gameEngine.getGameState();
     if (state.isLevelUpPending) {
-      if (event.key === "1") gameEngine.selectPerk(1);
-      if (event.key === "2") gameEngine.selectPerk(2);
-      if (event.key === "3") gameEngine.selectPerk(3);
-      return; // Skip other keys
+      if (event.key === "1") gameEngine.selectPerk(0); // Index 0
+      if (event.key === "2") gameEngine.selectPerk(1); // Index 1
+      if (event.key === "3") gameEngine.selectPerk(2); // Index 2
+      return;
     }
 
     if (!gameEngine || !gameEngine.isGameActive) return;
