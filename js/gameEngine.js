@@ -18,6 +18,9 @@ class GameEngine {
     this.spawnRate = 1500; // ms
     this.lastSpawnTime = 0;
 
+    // Speed Control
+    this.speedOffset = 0;
+
     // Callbacks
     this.onScoreChange = null;
     this.onGameEnd = null;
@@ -37,7 +40,8 @@ class GameEngine {
     this.items = [];
     this.basketPosition = "Center";
     this.spawnRate = 1500;
-    this.lastSpawnTime = 0; // First item spawns immediately
+    this.speedOffset = 0;
+    this.lastSpawnTime = 0;
 
     if (this.timeLimit > 0) {
       this.startTimer();
@@ -47,54 +51,18 @@ class GameEngine {
     this.startGameLoop();
   }
 
+  // ... (stop, startTimer, clearTimer, startGameLoop, stopGameLoop remain same or similar)
+
   /**
-   * Stop Game
+   * Adjust Speed manually
+   * @param {number} amount - positive to speed up, negative to slow down
    */
-  stop() {
-    this.isGameActive = false;
-    this.clearTimer();
-    this.stopGameLoop();
-
-    if (this.onGameEnd) {
-      this.onGameEnd(this.score, this.level);
-    }
-  }
-
-  startTimer() {
-    this.gameTimer = setInterval(() => {
-      this.timeLimit--;
-
-      // Level up logic based on time (every 20s)
-      if (this.timeLimit % 20 === 0 && this.timeLimit !== 60) {
-        this.level++;
-        this.spawnRate = Math.max(500, 1500 - (this.level - 1) * 300); // Increase difficulty
-      }
-
-      if (this.timeLimit <= 0) {
-        this.stop();
-      }
-    }, 1000);
-  }
-
-  clearTimer() {
-    if (this.gameTimer) {
-      clearInterval(this.gameTimer);
-      this.gameTimer = null;
-    }
-  }
-
-  startGameLoop() {
-    // 60 FPS physics loop
-    this.updateInterval = setInterval(() => {
-      this.update();
-    }, 1000 / 60);
-  }
-
-  stopGameLoop() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-      this.updateInterval = null;
-    }
+  adjustSpeed(amount) {
+    this.speedOffset += amount;
+    // Clamp speed offset to avoid stopping or going too fast
+    // Base speed is ~1.5 to 5. So offset could range -1 to +5
+    if (this.speedOffset < -1) this.speedOffset = -1;
+    if (this.speedOffset > 5) this.speedOffset = 5;
   }
 
   /**
@@ -106,14 +74,18 @@ class GameEngine {
     const now = Date.now();
 
     // 1. Spawn Items
-    if (now - this.lastSpawnTime > this.spawnRate) {
+    // Adjust spawn rate based on speed? Or keep separate?
+    // Let's speed up spawn rate slightly if speed increases
+    const effectiveSpawnRate = Math.max(500, this.spawnRate - (this.speedOffset * 200));
+
+    if (now - this.lastSpawnTime > effectiveSpawnRate) {
       this.spawnItem();
       this.lastSpawnTime = now;
     }
 
     // 2. Move Items & Check Collision
     // Canvas height is assumed to be 200 (from main.js)
-    const moveSpeed = 1 + (this.level * 0.5);
+    const moveSpeed = 1 + (this.level * 0.5) + this.speedOffset;
 
     for (let i = this.items.length - 1; i >= 0; i--) {
       const item = this.items[i];
@@ -150,20 +122,24 @@ class GameEngine {
 
   spawnItem() {
     const types = [
-      { name: 'apple', score: 100, color: 'red', type: 'good' },
-      { name: 'banana', score: 200, color: 'yellow', type: 'good' },
-      { name: 'bomb', score: -500, color: 'black', type: 'bad' }
+      { name: 'apple', score: 100, icon: '🍎', type: 'good' },
+      { name: 'banana', score: 200, icon: '🍌', type: 'good' },
+      { name: 'melon', score: 300, icon: '🍈', type: 'good' },
+      { name: 'orange', score: 150, icon: '🍊', type: 'good' },
+      { name: 'bomb', score: -500, icon: '💣', type: 'bad' }
     ];
 
     // Random type (Bomb 20% chance)
     const isBomb = Math.random() < 0.2;
-    const type = isBomb ? types[2] : types[Math.floor(Math.random() * 2)];
+    // Pick random good fruit
+    const goodFruit = types[Math.floor(Math.random() * 4)]; // 0 to 3
+    const type = isBomb ? types[4] : goodFruit;
 
     // Random Position (Left, Center, Right)
     const positions = ["Left", "Center", "Right"];
     const posLabel = positions[Math.floor(Math.random() * positions.length)];
 
-    // X coordinates matching 3 lanes (Canvas width 200: ~33, ~100, ~166)
+    // X coordinates matching 3 lanes
     let x = 100;
     if (posLabel === "Left") x = 40;
     else if (posLabel === "Right") x = 160;

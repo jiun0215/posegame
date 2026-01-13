@@ -156,22 +156,21 @@ function drawGameElements() {
   // 2. Draw Items
   if (state.items) {
     state.items.forEach(item => {
-      ctx.beginPath();
-      ctx.arc(item.x, item.y, 10, 0, 2 * Math.PI);
-      ctx.fillStyle = item.color;
-      ctx.fill();
-      // Icon or Text
-      ctx.fillStyle = "white";
-      ctx.font = "12px Arial";
-      ctx.fillText(item.type === 'bad' ? "💣" : "🍎", item.x - 6, item.y + 4);
+      // Use Emojis instead of circles
+      ctx.font = "24px Arial"; // 24px emoji size
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(item.icon, item.x, item.y);
+
+      // Removed dot and small text drawing
     });
   }
 
-  // 3. HUD (Score & Time) -> Painted on Canvas or DOM? 
-  // Let's paint simple HUD on Canvas for sync
+  // 3. HUD (Score & Time)
   ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
   ctx.fillRect(0, 0, 200, 30);
   ctx.fillStyle = "white";
+  ctx.textAlign = "left"; // Reset alignment
   ctx.font = "14px Arial";
   ctx.fillText(`Score: ${state.score}`, 10, 20);
   ctx.fillText(`Time: ${state.timeLimit || 0}`, 130, 20);
@@ -192,23 +191,30 @@ function startGameMode(config) {
 
   gameEngine.start({ timeLimit: 60 });
 
-  // 키보드 컨트롤 추가 (ArrowLeft, ArrowRight)
+  // 키보드 컨트롤 추가
   window.addEventListener("keydown", (event) => {
     if (!gameEngine || !gameEngine.isGameActive) return;
 
-    const currentPos = gameEngine.basketPosition; // "Left", "Center", "Right"
+    // Movement
+    const currentPos = gameEngine.basketPosition;
     let nextPos = currentPos;
 
     if (event.key === "ArrowLeft") {
       if (currentPos === "Right") nextPos = "Center";
       else if (currentPos === "Center") nextPos = "Left";
-    } else if (event.key === "ArrowRight") {
+      gameEngine.onPoseDetected(nextPos);
+    }
+    else if (event.key === "ArrowRight") {
       if (currentPos === "Left") nextPos = "Center";
       else if (currentPos === "Center") nextPos = "Right";
-    }
-
-    if (nextPos !== currentPos) {
       gameEngine.onPoseDetected(nextPos);
+    }
+    // Speed Control
+    else if (event.key === "ArrowUp") {
+      gameEngine.adjustSpeed(0.5); // Speed Up
+    }
+    else if (event.key === "ArrowDown") {
+      gameEngine.adjustSpeed(-0.5); // Speed Down
     }
   });
 }
