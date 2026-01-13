@@ -7,9 +7,9 @@ class GameEngine {
   constructor() {
     this.score = 0;
     this.level = 1;
-    this.timeLimit = 0;
+    // this.timeLimit = 0; // Removed
     this.isGameActive = false;
-    this.gameTimer = null;
+    // this.gameTimer = null; // Removed
     this.updateInterval = null;
 
     // Fruit Catcher specific state
@@ -35,7 +35,7 @@ class GameEngine {
     this.isGameActive = true;
     this.score = 0;
     this.level = 1;
-    this.timeLimit = config.timeLimit || 60;
+    // this.timeLimit = config.timeLimit || 60; // Removed
 
     this.items = [];
     this.basketPosition = "Center";
@@ -43,9 +43,10 @@ class GameEngine {
     this.speedOffset = 0;
     this.lastSpawnTime = 0;
 
-    if (this.timeLimit > 0) {
-      this.startTimer();
-    }
+    // Timer removed
+    // if (this.timeLimit > 0) {
+    //   this.startTimer();
+    // }
 
     // Start Game Loop (Physics & Logic)
     this.startGameLoop();
@@ -56,7 +57,7 @@ class GameEngine {
    */
   stop() {
     this.isGameActive = false;
-    this.clearTimer();
+    // this.clearTimer(); // Removed
     this.stopGameLoop();
 
     if (this.onGameEnd) {
@@ -64,25 +65,25 @@ class GameEngine {
     }
   }
 
-  startTimer() {
-    this.gameTimer = setInterval(() => {
-      this.timeLimit--;
+  // startTimer() {
+  //   this.gameTimer = setInterval(() => {
+  //     this.timeLimit--;
 
-      // Removed Time-based Level up
-      // if (this.timeLimit % 20 === 0 && this.timeLimit !== 60) ...
+  //     // Removed Time-based Level up
+  //     // if (this.timeLimit % 20 === 0 && this.timeLimit !== 60) ...
 
-      if (this.timeLimit <= 0) {
-        this.stop();
-      }
-    }, 1000);
-  }
+  //     if (this.timeLimit <= 0) {
+  //       this.stop();
+  //     }
+  //   }, 1000);
+  // }
 
-  clearTimer() {
-    if (this.gameTimer) {
-      clearInterval(this.gameTimer);
-      this.gameTimer = null;
-    }
-  }
+  // clearTimer() {
+  //   if (this.gameTimer) {
+  //     clearInterval(this.gameTimer);
+  //     this.gameTimer = null;
+  //   }
+  // }
 
   startGameLoop() {
     // 60 FPS physics loop
@@ -154,7 +155,7 @@ class GameEngine {
         items: this.items,
         basketPosition: this.basketPosition,
         score: this.score,
-        time: this.timeLimit,
+        // time: this.timeLimit, // Removed
         level: this.level
       });
     }
@@ -202,8 +203,9 @@ class GameEngine {
 
     if (item.type === 'bad') {
       points = item.score;
-      if (this.score + points < 0) this.score = 0;
-      else this.score += points;
+      this.score += points;
+      // Allow negative score? User said -200 randomized. Let's clamp at 0 for display but internal logic might differ.
+      if (this.score < 0) this.score = 0;
     }
     else if (item.type === 'random') {
       // Random Box: -200 ~ +600
@@ -256,7 +258,8 @@ class GameEngine {
     return {
       basketPosition: this.basketPosition,
       items: this.items,
-      score: this.score
+      score: this.score,
+      level: this.level // Added level here!
     };
   }
 }

@@ -191,14 +191,14 @@ function drawGameElements() {
     });
   }
 
-  // 3. HUD (Score & Time)
+  // 3. HUD (Score)
   ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
   ctx.fillRect(0, 0, 200, 30);
   ctx.fillStyle = "white";
   ctx.textAlign = "left"; // Reset alignment
   ctx.font = "14px Arial";
-  ctx.fillText(`Score: ${state.score}`, 10, 20);
-  ctx.fillText(`Time: ${state.timeLimit || 0}`, 130, 20);
+  ctx.fillText(`Score: ${state.score} (Lv.${state.level || 1})`, 10, 20);
+  // Time removed
 }
 
 // 게임 모드 시작 함수
@@ -214,7 +214,7 @@ function startGameMode(config) {
     alert(`게임 종료! 최종 점수: ${finalScore}점`);
   });
 
-  gameEngine.start({ timeLimit: 60 });
+  gameEngine.start(); // Remove timeLimit config
 
   // 키보드 컨트롤 추가
   window.addEventListener("keydown", (event) => {
