@@ -21,6 +21,12 @@ class GameEngine {
     // Speed Control
     this.speedOffset = 0;
 
+    // Perks System
+    this.shieldCount = 0;
+    this.luckLevel = 0;  // Reduces bomb chance
+    this.greedLevel = 0; // Increases random box rewards
+    this.isLevelUpPending = false;
+
     // Callbacks
     this.onScoreChange = null;
     this.onGameEnd = null;
@@ -33,9 +39,15 @@ class GameEngine {
    */
   start(config = {}) {
     this.isGameActive = true;
+    this.isLevelUpPending = false;
     this.score = 0;
     this.level = 1;
     // this.timeLimit = config.timeLimit || 60; // Removed
+
+    // Reset Perks
+    this.shieldCount = 0;
+    this.luckLevel = 0;
+    this.greedLevel = 0;
 
     this.items = [];
     this.basketPosition = "Center";
@@ -109,10 +121,35 @@ class GameEngine {
   }
 
   /**
+   * Apply Selected Perk and Resume
+   */
+  selectPerk(perkType) {
+    if (!this.isLevelUpPending) return;
+
+    switch (perkType) {
+      case 1: // Shield
+        this.shieldCount++;
+        break;
+      case 2: // Luck
+        this.luckLevel++;
+        break;
+      case 3: // Greed
+        this.greedLevel++;
+        break;
+    }
+
+    // Level Up Proceed
+    this.level++;
+    this.adjustSpeed(0.5); // Harder
+    this.isLevelUpPending = false;
+    this.isGameActive = true; // Resume
+  }
+
+  /**
    * Core Game Loop
    */
   update() {
-    if (!this.isGameActive) return;
+    if (!this.isGameActive || this.isLevelUpPending) return;
 
     const now = Date.now();
 
@@ -151,13 +188,7 @@ class GameEngine {
 
     // 3. Notify Renderer
     if (this.onUpdateState) {
-      this.onUpdateState({
-        items: this.items,
-        basketPosition: this.basketPosition,
-        score: this.score,
-        // time: this.timeLimit, // Removed
-        level: this.level
-      });
+      this.onUpdateState(this.getGameState());
     }
   }
 
@@ -171,11 +202,14 @@ class GameEngine {
       { name: 'bomb', score: -500, icon: '💣', type: 'bad' }
     ];
 
-    // Bomb (15%), Random Box (15%), Good Fruit (70%)
+    // Bomb Chance Logic (Base 15% - Luck * 3%)
+    const baseBombChance = 0.15;
+    const bombChance = Math.max(0.05, baseBombChance - (this.luckLevel * 0.03));
+
     const rand = Math.random();
     let type;
-    if (rand < 0.15) type = types[5]; // Bomb
-    else if (rand < 0.30) type = types[4]; // Random Box
+    if (rand < bombChance) type = types[5]; // Bomb
+    else if (rand < bombChance + 0.15) type = types[4]; // Random Box
     else type = types[Math.floor(Math.random() * 4)]; // Good Fruit
 
     // Random Position
@@ -202,14 +236,24 @@ class GameEngine {
     let points = 0;
 
     if (item.type === 'bad') {
-      points = item.score;
-      this.score += points;
-      // Allow negative score? User said -200 randomized. Let's clamp at 0 for display but internal logic might differ.
-      if (this.score < 0) this.score = 0;
+      // Shield Check
+      if (this.shieldCount > 0) {
+        this.shieldCount--;
+        // Blocked! No score penalty.
+        // Could add visual effect here later via callback
+      } else {
+        points = item.score;
+        this.score += points;
+        if (this.score < 0) this.score = 0;
+      }
     }
     else if (item.type === 'random') {
-      // Random Box: -200 ~ +600
-      points = Math.floor(Math.random() * 801) - 200;
+      // Greed: Bonus to range (+100 per level)
+      const bonus = this.greedLevel * 100;
+      const min = -200 + bonus;
+      const max = 600 + (bonus * 2);
+
+      points = Math.floor(Math.random() * (max - min + 1)) + min;
       this.score += points;
       if (this.score < 0) this.score = 0;
     }
@@ -219,16 +263,12 @@ class GameEngine {
       this.score += points;
     }
 
-    // Score-based Level Up (Every 5000 points)
-    const newLevel = Math.floor(this.score / 5000) + 1;
-    if (newLevel > this.level) {
-      this.level = newLevel;
-      this.adjustSpeed(0.5); // Increase speed per level
-    }
-    // Downgrade level if score drops? (Optional, let's keep max level or current level)
-    else if (newLevel < this.level) {
-      this.level = newLevel;
-      this.adjustSpeed(-0.5);
+    // Level Check: Every 3000 points
+    const nextLevelThreshold = this.level * 3000;
+
+    if (this.score >= nextLevelThreshold && !this.isLevelUpPending) {
+      this.isLevelUpPending = true;
+      // Game pauses automatically in update() loop
     }
 
     if (this.onScoreChange) {
@@ -241,7 +281,7 @@ class GameEngine {
    * @param {string} poseLabel - "Left", "Center", "Right"
    */
   onPoseDetected(poseLabel) {
-    if (!this.isGameActive) return;
+    if (!this.isGameActive || this.isLevelUpPending) return;
     // Allow only valid positions
     if (["Left", "Center", "Right"].includes(poseLabel)) {
       this.basketPosition = poseLabel;
@@ -259,7 +299,13 @@ class GameEngine {
       basketPosition: this.basketPosition,
       items: this.items,
       score: this.score,
-      level: this.level // Added level here!
+      level: this.level,
+      isLevelUpPending: this.isLevelUpPending,
+      perks: {
+        shield: this.shieldCount,
+        luck: this.luckLevel,
+        greed: this.greedLevel
+      }
     };
   }
 }
